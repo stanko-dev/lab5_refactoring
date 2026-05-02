@@ -1,47 +1,108 @@
-# Restaurant Service Layer
+<div align="center">
 
-Java-система управління рестораном, побудована за архітектурою Controller-Service-Repository з повним покриттям юніт-тестами.
+# 🍽️ Restaurant Service Layer
 
-## Бізнес-сценарії
+![Java](https://img.shields.io/badge/Java-21-orange?style=flat-square&logo=openjdk)
+![Maven](https://img.shields.io/badge/Maven-3.8-C71A36?style=flat-square&logo=apachemaven)
+![JUnit](https://img.shields.io/badge/JUnit-5-25A162?style=flat-square&logo=junit5)
+![Tests](https://img.shields.io/badge/Tests-13%20passed-brightgreen?style=flat-square)
+![Checkstyle](https://img.shields.io/badge/Checkstyle-passing-brightgreen?style=flat-square)
 
-**1. Розміщення замовлення — `placeOrder(customerId, dishNames)`**  
-Клієнт обирає страви зі списку. Сервіс перевіряє існування клієнта та кожної страви, створює замовлення зі статусом `PENDING` і зберігає його в репозиторії.
+Java-система управління рестораном з архітектурою **Controller → Service → Repository**,  
+повним покриттям юніт-тестів та перевіркою стилю коду.
 
-**2. Скасування замовлення — `cancelOrder(orderId)`**  
-Переводить замовлення у статус `CANCELLED`. Якщо замовлення вже скасовано або завершено — кидає виняток.
+</div>
 
-**3. Пошук страв за назвою — `findDishesByName(name)`**  
-Повертає всі страви, назва яких містить пошуковий рядок (регістронезалежно). Порожній запит — виняток.
+---
 
-**4. Реєстрація клієнта — `registerCustomer(id, name)`**  
-Додає нового клієнта. Дублікат id або порожнє ім'я — виняток.
-
-## Структура
+## 📐 Архітектура
 
 ```
-src/main/java/com/restaurant/
-├── model/       — Dish, Customer, Order, OrderStatus
-├── dto/         — OrderDTO, CustomerDTO
-├── repository/  — OrderRepository, CustomerRepository, DishRepository (інтерфейси + InMemory-реалізації)
-├── service/     — RestaurantService (бізнес-логіка)
-└── controller/  — RestaurantController (точка входу)
-
-src/test/java/com/restaurant/
-└── RestaurantServiceTest.java — 13 юніт-тестів
+RestaurantController          ← точка входу, делегує виклики
+        │
+        ▼
+RestaurantService             ← вся бізнес-логіка та валідація
+        │
+   ┌────┴────────────┐
+   ▼                 ▼
+OrderRepository   CustomerRepository   DishRepository
+   │                 │                      │
+InMemory...       InMemory...           InMemory...    ← реалізації
 ```
 
-## Запуск тестів
+Залежності інжектуються через конструктор — `Service` знає тільки про інтерфейси репозиторіїв.
+
+---
+
+## 🗂️ Структура проєкту
+
+```
+src/
+├── main/java/com/restaurant/
+│   ├── model/          Dish · Customer · Order · OrderStatus
+│   ├── dto/            OrderDTO · CustomerDTO
+│   ├── repository/     інтерфейси + InMemory-реалізації
+│   ├── service/        RestaurantService  ← бізнес-логіка
+│   └── controller/     RestaurantController
+│
+└── test/java/com/restaurant/
+    └── RestaurantServiceTest.java   (13 тестів)
+```
+
+---
+
+## ⚙️ Бізнес-сценарії
+
+| №  | Метод | Опис |
+|----|-------|------|
+| 1  | `placeOrder(customerId, dishNames)` | Перевіряє клієнта та страви, створює замовлення зі статусом `PENDING` |
+| 2  | `cancelOrder(orderId)` | Переводить у `CANCELLED`; кидає виняток якщо вже скасовано або завершено |
+| 3  | `findDishesByName(name)` | Пошук за підрядком (регістронезалежно); порожній запит — виняток |
+| 4  | `registerCustomer(id, name)` | Реєструє клієнта; дублікат id або порожнє ім'я — виняток |
+
+---
+
+## 🚀 Швидкий старт
+
+**Вимоги:** Java 21+, Maven 3.8+
 
 ```bash
+# Клонувати репозиторій
+git clone https://github.com/stanko-dev/lab5_refactoring.git
+cd lab5_refactoring
+
+# Запустити тести
 mvn test
-```
 
-```
-Tests run: 13, Failures: 0, Errors: 0, Skipped: 0 — BUILD SUCCESS
-```
-
-## Перевірка стилю коду
-
-```bash
+# Перевірка стилю коду
 mvn checkstyle:check
 ```
+
+---
+
+## 🧪 Тести
+
+```
+Tests run: 13, Failures: 0, Errors: 0, Skipped: 0
+
+BUILD SUCCESS
+```
+
+| Сценарій | Тести |
+|----------|-------|
+| `placeOrder` | success · customerNotFound · emptyDishes · unknownDish |
+| `cancelOrder` | success · alreadyCancelled · notFound |
+| `findDishesByName` | returnsMatches · noMatches · blankQuery |
+| `registerCustomer` | success · duplicateId · blankName |
+
+---
+
+## 🛠️ Технології
+
+| | |
+|---|---|
+| Мова | Java 21 |
+| Збірка | Apache Maven 3.8 |
+| Тести | JUnit 5 (Jupiter) |
+| Якість коду | Checkstyle |
+| Патерн | Controller-Service-Repository |
