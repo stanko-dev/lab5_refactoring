@@ -94,15 +94,3 @@ BUILD SUCCESS
 | `cancelOrder` | success · alreadyCancelled · notFound |
 | `findDishesByName` | returnsMatches · noMatches · blankQuery |
 | `registerCustomer` | success · duplicateId · blankName |
-
----
-
-## 🛠️ Технології
-
-| | |
-|---|---|
-| Мова | Java 21 |
-| Збірка | Apache Maven 3.8 |
-| Тести | JUnit 5 (Jupiter) |
-| Якість коду | Checkstyle |
-| Патерн | Controller-Service-Repository |
