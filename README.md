@@ -5,7 +5,7 @@
 ![Java](https://img.shields.io/badge/Java-21-orange?style=flat-square&logo=openjdk)
 ![Maven](https://img.shields.io/badge/Maven-3.8-C71A36?style=flat-square&logo=apachemaven)
 ![JUnit](https://img.shields.io/badge/JUnit-5-25A162?style=flat-square&logo=junit5)
-![Tests](https://img.shields.io/badge/Tests-13%20passed-brightgreen?style=flat-square)
+![Tests](https://img.shields.io/badge/Tests-31%20passed-brightgreen?style=flat-square)
 ![Checkstyle](https://img.shields.io/badge/Checkstyle-passing-brightgreen?style=flat-square)
 
 Java-система управління рестораном з архітектурою **Controller → Service → Repository**,  
@@ -46,7 +46,8 @@ src/
 │   └── controller/     RestaurantController
 │
 └── test/java/com/restaurant/
-    └── RestaurantServiceTest.java   (13 тестів)
+    ├── RestaurantServiceTest.java     (17 тестів)
+    └── RestaurantRepositoryTest.java  (14 тестів)
 ```
 
 ---
@@ -83,14 +84,24 @@ mvn checkstyle:check
 ## 🧪 Тести
 
 ```
-Tests run: 13, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 31, Failures: 0, Errors: 0, Skipped: 0
 
 BUILD SUCCESS
 ```
 
+### RestaurantServiceTest — 17 тестів
+
 | Сценарій | Тести |
 |----------|-------|
-| `placeOrder` | success · customerNotFound · emptyDishes · unknownDish |
-| `cancelOrder` | success · alreadyCancelled · notFound |
-| `findDishesByName` | returnsMatches · noMatches · blankQuery |
+| `placeOrder` | success · customerNotFound · emptyDishes · unknownDish · multipleDishes · idIncrements |
+| `cancelOrder` | success · alreadyCancelled · notFound · completedOrder |
+| `findDishesByName` | returnsMatches · noMatches · blankQuery · caseInsensitive |
 | `registerCustomer` | success · duplicateId · blankName |
+
+### RestaurantRepositoryTest — 14 тестів
+
+| Репозиторій | Тести |
+|-------------|-------|
+| `InMemoryOrderRepository` | save+findById · findById missing · findAll · deleteById · unmodifiableCopy |
+| `InMemoryCustomerRepository` | save+findById · findById missing · existsById true · existsById false · duplicateId |
+| `InMemoryDishRepository` | findAll · findByName substring · findByName caseInsensitive · findByName blank |

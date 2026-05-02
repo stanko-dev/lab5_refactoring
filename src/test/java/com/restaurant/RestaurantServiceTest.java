@@ -3,6 +3,8 @@ package com.restaurant;
 import com.restaurant.dto.CustomerDTO;
 import com.restaurant.dto.OrderDTO;
 import com.restaurant.model.Dish;
+import com.restaurant.model.Order;
+import com.restaurant.model.OrderStatus;
 import com.restaurant.repository.InMemoryCustomerRepository;
 import com.restaurant.repository.InMemoryDishRepository;
 import com.restaurant.repository.InMemoryOrderRepository;
@@ -17,10 +19,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class RestaurantServiceTest {
 
     private RestaurantService service;
+    private InMemoryOrderRepository orderRepo;
 
     @BeforeEach
     void setUp() {
-        InMemoryOrderRepository orderRepo = new InMemoryOrderRepository();
+        orderRepo = new InMemoryOrderRepository();
         InMemoryCustomerRepository customerRepo = new InMemoryCustomerRepository();
         InMemoryDishRepository dishRepo = new InMemoryDishRepository();
 
@@ -61,6 +64,21 @@ class RestaurantServiceTest {
                 () -> service.placeOrder(1, List.of("Невідома страва")));
     }
 
+    @Test
+    void placeOrder_multipleDishes_sumsTotal() {
+        OrderDTO order = service.placeOrder(1,
+                List.of("Піца Маргарита", "Піца Пепероні"));
+        assertEquals(390.0, order.totalPrice);
+        assertEquals(2, order.dishNames.size());
+    }
+
+    @Test
+    void placeOrder_idIncrements_onEachOrder() {
+        OrderDTO first = service.placeOrder(1, List.of("Борщ"));
+        OrderDTO second = service.placeOrder(1, List.of("Борщ"));
+        assertNotEquals(first.orderId, second.orderId);
+    }
+
     // --- Сценарій 2: Скасування замовлення ---
 
     @Test
@@ -84,6 +102,15 @@ class RestaurantServiceTest {
                 () -> service.cancelOrder(999));
     }
 
+    @Test
+    void cancelOrder_completedOrder_throws() {
+        OrderDTO placed = service.placeOrder(1, List.of("Борщ"));
+        Order order = orderRepo.findById(placed.orderId).orElseThrow();
+        order.setStatus(OrderStatus.COMPLETED);
+        assertThrows(IllegalStateException.class,
+                () -> service.cancelOrder(placed.orderId));
+    }
+
     // --- Сценарій 3: Пошук страв ---
 
     @Test
@@ -102,6 +129,12 @@ class RestaurantServiceTest {
     void findDishesByName_blankQuery_throws() {
         assertThrows(IllegalArgumentException.class,
                 () -> service.findDishesByName("  "));
+    }
+
+    @Test
+    void findDishesByName_caseInsensitive_returnsMatches() {
+        List<Dish> result = service.findDishesByName("піца");
+        assertEquals(2, result.size());
     }
 
     // --- Сценарій 4: Реєстрація клієнта ---
