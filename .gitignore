@@ -1,0 +1,6 @@
+target/
+*.pdf
+*.docx
+generate_*.py
+.idea/
+*.iml
