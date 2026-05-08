@@ -11,8 +11,12 @@ public class Order {
     private OrderStatus status;
 
     public Order(int id, Customer customer, List<Dish> dishes) {
-        if (customer == null) throw new IllegalArgumentException("Customer is required");
-        if (dishes == null || dishes.isEmpty()) throw new IllegalArgumentException("Order must have at least one dish");
+        if (customer == null) {
+            throw new IllegalArgumentException("Customer is required");
+        }
+        if (dishes == null || dishes.isEmpty()) {
+            throw new IllegalArgumentException("Order must have at least one dish");
+        }
         this.id = id;
         this.customer = customer;
         this.dishes = new ArrayList<>(dishes);

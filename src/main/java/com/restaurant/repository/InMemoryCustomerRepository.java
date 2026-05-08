@@ -10,8 +10,12 @@ public class InMemoryCustomerRepository implements CustomerRepository {
 
     @Override
     public void save(Customer customer) {
-        if (customer == null) throw new IllegalArgumentException("Customer cannot be null");
-        if (existsById(customer.getId())) throw new IllegalArgumentException("Customer with id " + customer.getId() + " already exists");
+        if (customer == null) {
+            throw new IllegalArgumentException("Customer cannot be null");
+        }
+        if (existsById(customer.getId())) {
+            throw new IllegalArgumentException("Customer with id " + customer.getId() + " already exists");
+        }
         customers.add(customer);
     }
 

@@ -17,7 +17,6 @@ public class RestaurantService {
     private final OrderRepository orderRepository;
     private final CustomerRepository customerRepository;
     private final DishRepository dishRepository;
-    private int nextOrderId = 1;
 
     public RestaurantService(OrderRepository orderRepository,
                              CustomerRepository customerRepository,
@@ -41,7 +40,7 @@ public class RestaurantService {
                         .orElseThrow(() -> new IllegalArgumentException("Dish not found: " + name)))
                 .toList();
 
-        Order order = new Order(nextOrderId++, customer, dishes);
+        Order order = new Order(orderRepository.nextId(), customer, dishes);
         orderRepository.save(order);
         return toDTO(order);
     }
@@ -62,7 +61,23 @@ public class RestaurantService {
         return toDTO(order);
     }
 
-    // Сценарій 3: Пошук страв за назвою
+    // Сценарій 3: Завершення замовлення
+    public OrderDTO completeOrder(int orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found: " + orderId));
+
+        if (order.getStatus() == OrderStatus.COMPLETED) {
+            throw new IllegalStateException("Order is already completed");
+        }
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new IllegalStateException("Cannot complete a cancelled order");
+        }
+
+        order.setStatus(OrderStatus.COMPLETED);
+        return toDTO(order);
+    }
+
+    // Сценарій 4: Пошук страв за назвою
     public List<Dish> findDishesByName(String name) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Search name cannot be blank");
@@ -70,7 +85,7 @@ public class RestaurantService {
         return dishRepository.findByName(name);
     }
 
-    // Сценарій 4: Реєстрація клієнта
+    // Сценарій 5: Реєстрація клієнта
     public CustomerDTO registerCustomer(int id, String name) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Customer name cannot be blank");
@@ -85,6 +100,7 @@ public class RestaurantService {
 
     private OrderDTO toDTO(Order order) {
         List<String> names = order.getDishes().stream().map(Dish::getName).toList();
-        return new OrderDTO(order.getId(), order.getCustomer().getName(), names, order.getTotalPrice(), order.getStatus().name());
+        return new OrderDTO(order.getId(), order.getCustomer().getName(),
+                names, order.getTotalPrice(), order.getStatus().name());
     }
 }

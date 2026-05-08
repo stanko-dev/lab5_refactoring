@@ -5,7 +5,9 @@ public class Customer {
     private final String name;
 
     public Customer(int id, String name) {
-        if (name == null || name.isBlank()) throw new IllegalArgumentException("Customer name is required");
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Customer name is required");
+        }
         this.id = id;
         this.name = name;
     }

@@ -9,7 +9,9 @@ public class InMemoryDishRepository implements DishRepository {
 
     @Override
     public void save(Dish dish) {
-        if (dish == null) throw new IllegalArgumentException("Dish cannot be null");
+        if (dish == null) {
+            throw new IllegalArgumentException("Dish cannot be null");
+        }
         dishes.add(dish);
     }
 
@@ -20,7 +22,9 @@ public class InMemoryDishRepository implements DishRepository {
 
     @Override
     public List<Dish> findByName(String name) {
-        if (name == null || name.isBlank()) return List.of();
+        if (name == null || name.isBlank()) {
+            return List.of();
+        }
         String lower = name.toLowerCase();
         return dishes.stream()
                 .filter(d -> d.getName().toLowerCase().contains(lower))

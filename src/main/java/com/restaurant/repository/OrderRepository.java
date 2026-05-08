@@ -9,4 +9,5 @@ public interface OrderRepository {
     Optional<Order> findById(int id);
     List<Order> findAll();
     void deleteById(int id);
+    int nextId();
 }

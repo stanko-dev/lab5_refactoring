@@ -5,11 +5,12 @@
 ![Java](https://img.shields.io/badge/Java-21-orange?style=flat-square&logo=openjdk)
 ![Maven](https://img.shields.io/badge/Maven-3.8-C71A36?style=flat-square&logo=apachemaven)
 ![JUnit](https://img.shields.io/badge/JUnit-5-25A162?style=flat-square&logo=junit5)
-![Tests](https://img.shields.io/badge/Tests-31%20passed-brightgreen?style=flat-square)
+![Mockito](https://img.shields.io/badge/Mockito-5-green?style=flat-square)
+![Tests](https://img.shields.io/badge/Tests-34%20passed-brightgreen?style=flat-square)
 ![Checkstyle](https://img.shields.io/badge/Checkstyle-passing-brightgreen?style=flat-square)
 
 Java-система управління рестораном з архітектурою **Controller → Service → Repository**,  
-повним покриттям юніт-тестів та перевіркою стилю коду.
+повним покриттям юніт-тестів (Mockito) та перевіркою стилю коду.
 
 </div>
 
@@ -39,6 +40,7 @@ InMemory...       InMemory...           InMemory...    ← реалізації
 ```
 src/
 ├── main/java/com/restaurant/
+│   ├── Main.java           ← CLI точка входу (mvn exec:java)
 │   ├── model/          Dish · Customer · Order · OrderStatus
 │   ├── dto/            OrderDTO · CustomerDTO
 │   ├── repository/     інтерфейси + InMemory-реалізації
@@ -46,7 +48,7 @@ src/
 │   └── controller/     RestaurantController
 │
 └── test/java/com/restaurant/
-    ├── RestaurantServiceTest.java     (17 тестів)
+    ├── RestaurantServiceTest.java     (20 тестів, Mockito)
     └── RestaurantRepositoryTest.java  (14 тестів)
 ```
 
@@ -57,9 +59,10 @@ src/
 | №  | Метод | Опис |
 |----|-------|------|
 | 1  | `placeOrder(customerId, dishNames)` | Перевіряє клієнта та страви, створює замовлення зі статусом `PENDING` |
-| 2  | `cancelOrder(orderId)` | Переводить у `CANCELLED`; кидає виняток якщо вже скасовано або завершено |
-| 3  | `findDishesByName(name)` | Пошук за підрядком (регістронезалежно); порожній запит — виняток |
-| 4  | `registerCustomer(id, name)` | Реєструє клієнта; дублікат id або порожнє ім'я — виняток |
+| 2  | `cancelOrder(orderId)` | Переводить у `CANCELLED`; виняток якщо вже скасовано або завершено |
+| 3  | `completeOrder(orderId)` | Переводить у `COMPLETED`; виняток якщо вже завершено або скасовано |
+| 4  | `findDishesByName(name)` | Пошук за підрядком (регістронезалежно); порожній запит — виняток |
+| 5  | `registerCustomer(id, name)` | Реєструє клієнта; дублікат id або порожнє ім'я — виняток |
 
 ---
 
@@ -75,6 +78,9 @@ cd lab5_refactoring
 # Запустити тести
 mvn test
 
+# Запустити CLI демо (всі 5 сценаріїв)
+mvn exec:java
+
 # Перевірка стилю коду
 mvn checkstyle:check
 ```
@@ -84,18 +90,22 @@ mvn checkstyle:check
 ## 🧪 Тести
 
 ```
-Tests run: 31, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 34, Failures: 0, Errors: 0, Skipped: 0
 
 BUILD SUCCESS
 ```
 
-### RestaurantServiceTest — 17 тестів
+### RestaurantServiceTest — 20 тестів (з Mockito)
+
+Сервісні тести ізолюють `RestaurantService` через **мок-репозиторії** (`@Mock` + `@InjectMocks`).  
+Жодна реальна реалізація репозиторію не використовується — перевіряється лише бізнес-логіка.
 
 | Сценарій | Тести |
 |----------|-------|
 | `placeOrder` | success · customerNotFound · emptyDishes · unknownDish · multipleDishes · idIncrements |
 | `cancelOrder` | success · alreadyCancelled · notFound · completedOrder |
-| `findDishesByName` | returnsMatches · noMatches · blankQuery · caseInsensitive |
+| `completeOrder` | success · alreadyCompleted · alreadyCancelled · notFound |
+| `findDishesByName` | returnsMatches · noMatches · blankQuery |
 | `registerCustomer` | success · duplicateId · blankName |
 
 ### RestaurantRepositoryTest — 14 тестів

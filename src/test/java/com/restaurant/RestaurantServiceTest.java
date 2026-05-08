@@ -2,126 +2,206 @@ package com.restaurant;
 
 import com.restaurant.dto.CustomerDTO;
 import com.restaurant.dto.OrderDTO;
+import com.restaurant.model.Customer;
 import com.restaurant.model.Dish;
 import com.restaurant.model.Order;
 import com.restaurant.model.OrderStatus;
-import com.restaurant.repository.InMemoryCustomerRepository;
-import com.restaurant.repository.InMemoryDishRepository;
-import com.restaurant.repository.InMemoryOrderRepository;
+import com.restaurant.repository.CustomerRepository;
+import com.restaurant.repository.DishRepository;
+import com.restaurant.repository.OrderRepository;
 import com.restaurant.service.RestaurantService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class RestaurantServiceTest {
 
+    @Mock
+    private OrderRepository orderRepo;
+    @Mock
+    private CustomerRepository customerRepo;
+    @Mock
+    private DishRepository dishRepo;
+
+    @InjectMocks
     private RestaurantService service;
-    private InMemoryOrderRepository orderRepo;
 
-    @BeforeEach
-    void setUp() {
-        orderRepo = new InMemoryOrderRepository();
-        InMemoryCustomerRepository customerRepo = new InMemoryCustomerRepository();
-        InMemoryDishRepository dishRepo = new InMemoryDishRepository();
+    private static Customer ivan() {
+        return new Customer(1, "Іван");
+    }
 
-        dishRepo.save(new Dish("Піца Маргарита", 180.0, "Піца"));
-        dishRepo.save(new Dish("Піца Пепероні", 210.0, "Піца"));
-        dishRepo.save(new Dish("Борщ", 95.0, "Супи"));
+    private static Dish pizza() {
+        return new Dish("Піца Маргарита", 180.0, "Піца");
+    }
 
-        service = new RestaurantService(orderRepo, customerRepo, dishRepo);
-        service.registerCustomer(1, "Іван Петренко");
+    private static Dish borscht() {
+        return new Dish("Борщ", 95.0, "Супи");
+    }
+
+    private static Order pendingOrder() {
+        return new Order(1, ivan(), List.of(pizza()));
     }
 
     // --- Сценарій 1: Розміщення замовлення ---
 
     @Test
     void placeOrder_success() {
-        OrderDTO order = service.placeOrder(1, List.of("Піца Маргарита"));
-        assertNotNull(order);
-        assertEquals("Іван Петренко", order.customerName);
-        assertEquals("PENDING", order.status);
-        assertEquals(180.0, order.totalPrice);
+        when(customerRepo.findById(1)).thenReturn(Optional.of(ivan()));
+        when(dishRepo.findByName("Піца Маргарита")).thenReturn(List.of(pizza()));
+        when(orderRepo.nextId()).thenReturn(1);
+
+        OrderDTO result = service.placeOrder(1, List.of("Піца Маргарита"));
+
+        assertEquals("Іван", result.getCustomerName());
+        assertEquals("PENDING", result.getStatus());
+        assertEquals(180.0, result.getTotalPrice());
+        verify(orderRepo).save(any(Order.class));
     }
 
     @Test
     void placeOrder_customerNotFound_throws() {
+        when(customerRepo.findById(99)).thenReturn(Optional.empty());
         assertThrows(IllegalArgumentException.class,
                 () -> service.placeOrder(99, List.of("Піца Маргарита")));
     }
 
     @Test
     void placeOrder_emptyDishes_throws() {
+        when(customerRepo.findById(1)).thenReturn(Optional.of(ivan()));
         assertThrows(IllegalArgumentException.class,
                 () -> service.placeOrder(1, List.of()));
     }
 
     @Test
     void placeOrder_unknownDish_throws() {
+        when(customerRepo.findById(1)).thenReturn(Optional.of(ivan()));
+        when(dishRepo.findByName("Невідома страва")).thenReturn(List.of());
         assertThrows(IllegalArgumentException.class,
                 () -> service.placeOrder(1, List.of("Невідома страва")));
     }
 
     @Test
     void placeOrder_multipleDishes_sumsTotal() {
-        OrderDTO order = service.placeOrder(1,
-                List.of("Піца Маргарита", "Піца Пепероні"));
-        assertEquals(390.0, order.totalPrice);
-        assertEquals(2, order.dishNames.size());
+        when(customerRepo.findById(1)).thenReturn(Optional.of(ivan()));
+        when(dishRepo.findByName("Піца Маргарита")).thenReturn(List.of(pizza()));
+        when(dishRepo.findByName("Борщ")).thenReturn(List.of(borscht()));
+        when(orderRepo.nextId()).thenReturn(1);
+
+        OrderDTO result = service.placeOrder(1, List.of("Піца Маргарита", "Борщ"));
+
+        assertEquals(275.0, result.getTotalPrice());
+        assertEquals(2, result.getDishNames().size());
     }
 
     @Test
     void placeOrder_idIncrements_onEachOrder() {
+        when(customerRepo.findById(1)).thenReturn(Optional.of(ivan()));
+        when(dishRepo.findByName("Борщ")).thenReturn(List.of(borscht()));
+        when(orderRepo.nextId()).thenReturn(1, 2);
+
         OrderDTO first = service.placeOrder(1, List.of("Борщ"));
         OrderDTO second = service.placeOrder(1, List.of("Борщ"));
-        assertNotEquals(first.orderId, second.orderId);
+
+        assertNotEquals(first.getOrderId(), second.getOrderId());
     }
 
     // --- Сценарій 2: Скасування замовлення ---
 
     @Test
     void cancelOrder_success() {
-        OrderDTO placed = service.placeOrder(1, List.of("Борщ"));
-        OrderDTO cancelled = service.cancelOrder(placed.orderId);
-        assertEquals("CANCELLED", cancelled.status);
+        when(orderRepo.findById(1)).thenReturn(Optional.of(pendingOrder()));
+
+        OrderDTO result = service.cancelOrder(1);
+
+        assertEquals("CANCELLED", result.getStatus());
     }
 
     @Test
     void cancelOrder_alreadyCancelled_throws() {
-        OrderDTO placed = service.placeOrder(1, List.of("Борщ"));
-        service.cancelOrder(placed.orderId);
-        assertThrows(IllegalStateException.class,
-                () -> service.cancelOrder(placed.orderId));
+        Order order = pendingOrder();
+        order.setStatus(OrderStatus.CANCELLED);
+        when(orderRepo.findById(1)).thenReturn(Optional.of(order));
+
+        assertThrows(IllegalStateException.class, () -> service.cancelOrder(1));
     }
 
     @Test
     void cancelOrder_notFound_throws() {
-        assertThrows(IllegalArgumentException.class,
-                () -> service.cancelOrder(999));
+        when(orderRepo.findById(999)).thenReturn(Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> service.cancelOrder(999));
     }
 
     @Test
     void cancelOrder_completedOrder_throws() {
-        OrderDTO placed = service.placeOrder(1, List.of("Борщ"));
-        Order order = orderRepo.findById(placed.orderId).orElseThrow();
+        Order order = pendingOrder();
         order.setStatus(OrderStatus.COMPLETED);
-        assertThrows(IllegalStateException.class,
-                () -> service.cancelOrder(placed.orderId));
+        when(orderRepo.findById(1)).thenReturn(Optional.of(order));
+
+        assertThrows(IllegalStateException.class, () -> service.cancelOrder(1));
     }
 
-    // --- Сценарій 3: Пошук страв ---
+    // --- Сценарій 3: Завершення замовлення ---
+
+    @Test
+    void completeOrder_success() {
+        when(orderRepo.findById(1)).thenReturn(Optional.of(pendingOrder()));
+
+        OrderDTO result = service.completeOrder(1);
+
+        assertEquals("COMPLETED", result.getStatus());
+    }
+
+    @Test
+    void completeOrder_alreadyCompleted_throws() {
+        Order order = pendingOrder();
+        order.setStatus(OrderStatus.COMPLETED);
+        when(orderRepo.findById(1)).thenReturn(Optional.of(order));
+
+        assertThrows(IllegalStateException.class, () -> service.completeOrder(1));
+    }
+
+    @Test
+    void completeOrder_alreadyCancelled_throws() {
+        Order order = pendingOrder();
+        order.setStatus(OrderStatus.CANCELLED);
+        when(orderRepo.findById(1)).thenReturn(Optional.of(order));
+
+        assertThrows(IllegalStateException.class, () -> service.completeOrder(1));
+    }
+
+    @Test
+    void completeOrder_notFound_throws() {
+        when(orderRepo.findById(99)).thenReturn(Optional.empty());
+        assertThrows(IllegalArgumentException.class, () -> service.completeOrder(99));
+    }
+
+    // --- Сценарій 4: Пошук страв ---
 
     @Test
     void findDishesByName_returnsMatches() {
+        when(dishRepo.findByName("Піца")).thenReturn(List.of(pizza()));
+
         List<Dish> result = service.findDishesByName("Піца");
-        assertEquals(2, result.size());
+
+        assertEquals(1, result.size());
     }
 
     @Test
     void findDishesByName_noMatches_returnsEmpty() {
+        when(dishRepo.findByName("Суші")).thenReturn(List.of());
+
         List<Dish> result = service.findDishesByName("Суші");
+
         assertTrue(result.isEmpty());
     }
 
@@ -131,23 +211,22 @@ class RestaurantServiceTest {
                 () -> service.findDishesByName("  "));
     }
 
-    @Test
-    void findDishesByName_caseInsensitive_returnsMatches() {
-        List<Dish> result = service.findDishesByName("піца");
-        assertEquals(2, result.size());
-    }
-
-    // --- Сценарій 4: Реєстрація клієнта ---
+    // --- Сценарій 5: Реєстрація клієнта ---
 
     @Test
     void registerCustomer_success() {
-        CustomerDTO dto = service.registerCustomer(2, "Марія Коваленко");
-        assertEquals(2, dto.id);
-        assertEquals("Марія Коваленко", dto.name);
+        when(customerRepo.existsById(2)).thenReturn(false);
+
+        CustomerDTO result = service.registerCustomer(2, "Марія");
+
+        assertEquals(2, result.getId());
+        assertEquals("Марія", result.getName());
+        verify(customerRepo).save(any(Customer.class));
     }
 
     @Test
     void registerCustomer_duplicateId_throws() {
+        when(customerRepo.existsById(1)).thenReturn(true);
         assertThrows(IllegalArgumentException.class,
                 () -> service.registerCustomer(1, "Дублікат"));
     }

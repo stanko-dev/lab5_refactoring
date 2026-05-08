@@ -23,6 +23,10 @@ public class RestaurantController {
         return restaurantService.cancelOrder(orderId);
     }
 
+    public OrderDTO completeOrder(int orderId) {
+        return restaurantService.completeOrder(orderId);
+    }
+
     public List<Dish> searchDishes(String name) {
         return restaurantService.findDishesByName(name);
     }
